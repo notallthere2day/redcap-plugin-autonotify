@@ -7,13 +7,11 @@
  *
  * As of 2016-03-01 Autonotify was modified to store the configuration in the log instead of using the DET query string.
  * This was done to alleviate issues around maximum query string length.  The new version offers the ability to upgrade existing
- * autonitfy configurations on first use.
+ * autonotify configurations on first use.
  *
  * It must be used in conjunction with a data entry trigger to function in real-time.
  * The settings for each project are stored as an encoded variable (an) in the query string of the DET.
  *
- *
- * 
  * Andrew Martin, Stanford University, 2016
  *
 **/
@@ -25,10 +23,8 @@ error_reporting(E_ALL);
 // $log_file = "/Users/andy123/Documents/local REDCap server/redcap/temp/autonotify.log";
 
 // MANUAL OVERRIDE OF HTTPS - Add your url domain to this array if you want to only use http
-$http_only = array('stanford.edu');
+//$http_only = array('stanford.edu');
 
-// OPTIONAL SPECIAL LOG FILE FOR THIS PLUGIN (OTHERWISE WILL WRITE TO REDCAP TEMP)
-//$log_file = "/var/log/redcap/autonotify.log";
 
 
 ////////////// DONT EDIT BELOW HERE //////////////
@@ -44,6 +40,8 @@ if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['redcap_url']) ) {
 // Include required files
 require_once "../../redcap_connect.php";
 require_once "common.php";
+
+$log_file = "C:\inetpub\wwwroot\\redcap\\temp\autonotify2.log";//"/var/log/redcap/autonotify2.log";
 
 // If a log file hasn't been set, then let's default to the REDCap temp folder
 if (!isset($log_file)) {
@@ -126,7 +124,6 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
 include APP_PATH_DOCROOT . "ProjectSetup/tabs.php";
 injectPluginTabs($pid, $_SERVER["REQUEST_URI"], 'AutoNotify');
 
-
 // Super user warnings
 if (defined('SUPER_USER') && SUPER_USER) {
     if (!file_exists($log_file)) {
@@ -191,6 +188,7 @@ if ( !empty($data_entry_trigger_url) && $an->isDetUrlNotAutoNotify() ) {
         RCView::div(array(), $msg)
     );
     echo $html;
+
 }
 
 ######## HTML PAGE ###########
@@ -216,17 +214,6 @@ $section = $an->renderTriggers().
     RCView::div(array(),
         RCView::button(array('class'=>'jqbuttonmed ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only','onclick'=>'javascript:addTrigger();'), RCView::img(array('src'=>'add.png', 'class'=>'imgfix')).' Add another trigger')
     ).
-    RCView::div(array('class'=>'round chklist','id'=>'notification_config'),
-        // Alert Message
-        RCView::div(array('class'=>'chklisthdr','style'=>'color:rgb(128,0,0);margin-top:10px;'), "Configure Notification Email").
-        RCView::p(array(), 'This notification email will include a link to the record and will therefore include the value of the '.REDCap::getRecordIdField().' field.  For this reasons, this first field <b>SHOULD NOT INCLUDE PHI</b>.  It is recommended to use an auto-numbering first field as best practice and include PHI as a secondary identifier.').
-        RCView::table(array('cellspacing'=>'5', 'class'=>'tbi'),
-            AutoNotify::renderRow('to','To',$an->config['to']).
-            AutoNotify::renderRow('from','From',$an->config['from']).
-            AutoNotify::renderRow('subject','Subject',(empty($an->config['subject']) ? 'SECURE:' : $an->config['subject'])).
-            AutoNotify::renderRow('message','Message',$an->config['message'])
-        )
-    ).
     RCView::div(array('class'=>'round chklist','id'=>'det_config'),
         // Pre and Post AutoNotification -DAG URL to be executed
         RCView::div(array('class'=>'chklisthdr','style'=>'color:rgb(128,0,0);margin-top:10px;'), "Pre- and Post- AutoNotification DET Triggers").
@@ -241,7 +228,7 @@ $section = $an->renderTriggers().
 $last_modified = "<div class='modified'>" . ( empty($an->config['last_saved']) ? "This configuration has not been saved" : "Last saved " . $an->config['last_saved'] . " by " . $an->config['modified_by'] ) . "</div>";
 
 $page = RCView::div(array('class'=>'autonotify_config'),
-    RCView::h3(array(),'AutoNotify: a DET-based Notification Plugin').
+    RCView::h3(array(),'AutoNotify: Extended 11/17').
     $last_modified.
     $section.
     RCView::div(array(),
@@ -257,6 +244,12 @@ print AutoNotify::renderHelpDivs();
 ?>
 
 <script type="text/javascript">
+
+
+
+
+
+
 
     function save() {
         var params = new Object;	// Info to save
@@ -275,9 +268,22 @@ print AutoNotify::renderHelpDivs();
                     triggers[i][$(this).attr('id').replace(/\-\d+/,'')] = $(this).val();
                 }
             });
+			
+			// Add the new role drop down too
+			$('select.role_ddl', $(this)).each (function (index2, value2) {
+				
+				// Skip stuff without ID again
+				if ($(this).attr('id')) {				
+					triggers[i][$(this).attr('id').replace(/\-\d+/,'')] = $(this).val();
+				}
+			});		
+						
             triggers[i]['enabled'] = $('input[name^=enabled]:checked', $(this)).val();
             triggers[i]['scope'] = $('input[name^=scope]:checked', $(this)).val();
+			//add the DAGOnly radio
+			triggers[i]['dagonly'] = $('input[name^=dagonly]:checked', $(this)).val();
         });
+		
         params['triggers'] = JSON.stringify(triggers);
 
         // Get the notification settings
